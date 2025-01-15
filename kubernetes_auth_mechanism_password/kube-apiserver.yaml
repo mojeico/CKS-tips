@@ -1,0 +1,12 @@
+kind: Pod
+metadata:
+  creationTimestamp: null
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  containers:
+    - command:
+        - kube-apiserver
+        - --authorization-mode=Node,RBAC
+
+        - --basic-auth-file=/tmp/users/user-details.csv
