@@ -10,7 +10,7 @@
 
 
 # ###########################
-# Cluster Setup and Hardering 
+# CLUSTER SETUP AND HARDENING 
 # ###########################
 
 - CIS benchmark (k8s pdf document)  - https://www.cisecurity.org/benchmark/kubernetes
@@ -186,6 +186,15 @@ ClusterRoleBinding	   A ClusterRole	  The entire cluster
 
 
 
+# Node Metadata ( needs to block it)
+
+
+- get metadata about node - kubectl exec app -- curl -s http://controlplane:9999
+
+
+
+
+# Audit policy 
 
 
 
@@ -193,7 +202,9 @@ ClusterRoleBinding	   A ClusterRole	  The entire cluster
 
 
 
-
+# ################
+# SYSTEM HARDENING
+# ################
 
 
 
