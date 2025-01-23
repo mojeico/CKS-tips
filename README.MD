@@ -9,8 +9,9 @@
 
 
 
+# ###########################
 # Cluster Setup and Hardering 
-
+# ###########################
 
 - CIS benchmark (k8s pdf document)  - https://www.cisecurity.org/benchmark/kubernetes
 - CIS-CAT - tool to check your system (Kubernetes only in PRO version ) 
@@ -80,13 +81,19 @@ source ~/.bashrc
 
 
 
-# ACCESS TO API SERVER BY KUBE PROXY 
+# ACCESS TO API SERVER BY KUBE PROXY  - Opens proxy port to API server
 
 
 - Run kube proxy 
-  - kubectl proxy --port=8090 &
+  - kubectl proxy --port=8090 & (default port 8001)
 - Curl to localhost
   - curl http://localhost:8090/api
+  - curl 127.0.0.1:8090/version
+
+# PORT FORWARD  - Opens port to target deployment pods
+- kubectl port-forward pods/my_pod 8005:80 &
+  - pod port - 80
+  - port on my pc - 8005
 
 
 # ACCESS TO API SERVER BY IP ADDRESS 
@@ -138,6 +145,40 @@ Binding Type	         Binds to	        Scope
 RoleBinding	           A  Role	          A specific  namespace
 ClusterRoleBinding	   A ClusterRole	  The entire cluster
 
+
+# Kubelet Security 
+
+- test kubelet - curl -sk https://localhost:10250/pods
+
+
+
+- check Kubelet process  = --config=/var/lib/kubelet/config.yaml
+
+- 10250 - allow full access 
+- 10255 - allow unauthenticated read-only access
+
+- --anonymous-auth=false
+
+
+- Authentication = certificates (recommended) or API Bearer Tokens 
+  - Needs to set up ca file in kubelet and kubelet client key/cert in kube-apiserver
+
+- --authorization-mode=Webhook
+
+- --read-only-port=0 - disable it 
+
+
+
+
+# K8S software version 
+
+- K8s components have the same version 
+- Only Etcd and CoreDNS have own version 
+
+
+
+
+# Network policy 
 
 
 

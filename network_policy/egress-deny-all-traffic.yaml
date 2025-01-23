@@ -1,0 +1,14 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+spec:
+  podSelector:
+    matchLabels:
+      name: my_pod # apply only to my_pod
+  policyTypes:
+    - Egress
+  #
+  #egress:  < - WITHOUT EGRESS, DENY ALL
+  #  - { }  < - WITHOUT EGRESS, DENY ALL
+  #
