@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all-ingress
+spec:
+  podSelector:
+    matchLabels:
+      name: my_pod # apply only to my_pod
+  ingress:
+    - {}   # if empty allow all
+  policyTypes:
+    - Ingress
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-ingress
+spec:
+  podSelector:
+    matchLabels:
+      name: my_pod # apply only to my_pod
+  policyTypes:
+    - Ingress
+
+  #ingress:  < - WITHOUT INGRESS, DENY ALL
+  #  - { }   < - WITHOUT INGRESS, DENY ALL
+  #

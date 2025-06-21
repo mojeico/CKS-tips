@@ -7,10 +7,12 @@
 - Cloud
 
 
-
-
 # ###########################
-# CLUSTER SETUP AND HARDENING 
+# ###########################
+# ###########################
+# ###########################
+# ###########################
+# --- CLUSTER SETUP AND HARDENING ---
 # ###########################
 
 - CIS benchmark (k8s pdf document)  - https://www.cisecurity.org/benchmark/kubernetes
@@ -37,7 +39,7 @@
   - User SA - for user 
   - "compute" SA  - for tools like Jenkins, Prometheus  and etc 
 
-
+  
 
 
 - Certification
@@ -100,6 +102,11 @@ source ~/.bashrc
 -  curl request - curl -X GET K8S_ADDRESS/api --header "Authorization: Bearer  SECRET_FROM_K8S" --insecure
 
 
+# 
+- kubectl auth can-i delete node 
+- kubectl auth can-i create deployments 
+
+kubectl get pods --as dev-user
 
 
 # Authorization type  - kube-apiserver  --authorization-mode=......
@@ -131,6 +138,7 @@ source ~/.bashrc
 
 
 Parameter	                Role	                                            ClusterRole
+
 Scope	            Works within a single namespace	               Works across the entire cluster
 Resource Access     Access to namespace-scoped resources	       Access to both namespace-scoped and cluster-scoped resources
 Resource Types	    Namespace-scoped (e.g., Pods, Services)	       Cluster-scoped (e.g., Nodes, PVs) or Namespace-scoped
@@ -180,6 +188,7 @@ ClusterRoleBinding	   A ClusterRole	  The entire cluster
 
 # Network policy 
 
+Check folder  - [network_policy](network_policy)
 
 
 
@@ -201,20 +210,55 @@ ClusterRoleBinding	   A ClusterRole	  The entire cluster
 
 
 
-
 # ################
-# SYSTEM HARDENING
+# ################
+# ################
+# ################
+# --- SYSTEM HARDENING ---
 # ################
 
 
 
 
+Limit node access
+
+- no public access to worker-node
+- only private access to master node (vpn, or something else )
+- only public access to "load balancer" (only 443 port )
+
+
+- user account       - your account 
+- superuser account  - root 
+- system account     - ssh 
+- service account    - http, nginx 
+
+- id   - show info about account
+- who  - show user who login 
+- last - show last user login 
+
+
+- userdel / groupdel                
+- usermod -s /usr/sbin/nologin himanshi
+- useradd -d /opt/sam -s /bin/bash -G admin -u 2328 sam
 
 
 
+# Tracing syscalls
+
+!!!!!! needs to read about syscall 
+
+tracee - help you work with Tracing in vm/k8s
+https://github.com/aquasecurity/tracee
 
 
+Seccomp in Kubernetes 
 
+
+# AppArmor 
+
+!!!! needs to read about AppArmor
+
+and AppArmor in Kubernetes 
 
 
 

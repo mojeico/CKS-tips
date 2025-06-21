@@ -1,0 +1,46 @@
+
+#1 - create SA - my-super-sa
+#2 - add role and bla bla bla
+#3 - add serviceAccountName to pod and
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: projected-token-example
+spec:
+  serviceAccountName: my-super-sa  # или другой service account
+  containers:
+    - name: demo
+      image: busybox
+      command: ["sleep", "3600"]
+      volumeMounts:
+        - name: projected-volume
+          mountPath: /var/run/secrets/projected
+          readOnly: true
+  volumes:
+    - name: projected-volume
+      projected:
+        sources:
+          - serviceAccountToken: # Generate tokem without "create secret" with kubernetes.io/service-account.name
+              path: token
+              expirationSeconds: 3600
+
+
+
+
+
+---
+#old version
+
+kubectl create sa <serviceaccount-name>
+  
+  kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: blabla-secret
+  annotations:
+    kubernetes.io/service-account.name: blabla
+type: kubernetes.io/service-account-token
+  EOF
+
