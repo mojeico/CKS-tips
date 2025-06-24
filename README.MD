@@ -340,13 +340,71 @@ ps -ef | grep kube-apiserver | grep admission-plugins
 
 
 
-Pod security admission  (PSA) -   These standards let you define how you want to restrict the behavior of pods in a clear, consistent fashion.
+
+
+# Pod security admission  (PSA) -  check pod security before creating  (MODE)
+
+#  Pod security standards  - base policy for pod  (LEVEL)
+
+MODE:
+- Warn    -   just warn log 
+- Audit   -   Write audit log
+- Enforce -  	Policy violations will cause the pod to be rejected.
+
+
+LEVEL:
+- Privileged - Full access / Unrestricted policy, providing the widest possible level of permissions.
+- Baseline   - Minimally restrictive policy which prevents known privilege escalations.
+- Restricted - Heavily restricted policy, following current Pod hardening best practices.
+
+
+
+To enable Pod Security: 
+
+- pod-security.kubernetes.io/<MODE>: <LEVEL>
+
+- kubectl label ns alpha pod-security.kubernetes.io/warn=baseline
+
+- kubectl label ns beta pod-security.kubernetes.io/enforce=baseline pod-security.kubernetes.io/warn=restricted
+
+
+TO create your own rule - you need to create AdmissionConfiguration 
 
 
 
 
 
-Pod security standards 
+# Open Policy Agent (OPA)
+- Gatekeeper 
+
+
+untrusted-registry.rego
+
+package kubernetes.admission
+
+deny[msg] {
+  input.request.kind.kind == "Pod"
+  image := input.request.object.spec.containers[_].image
+  not startswith(image, "hooli.com/")
+  msg := sprintf("image '%v' comes from untrusted registry", [image])
+}
+
+allow only pod with hooli.com/ image 
+
+
+admission webhook "validating-webhook.openpolicyagent.org" denied the request: image 'nginx' comes from untrusted registry
+
+
+
+
+# Policy engine
+- Kyverno
+
+
+
+
+
+
 
 
 
