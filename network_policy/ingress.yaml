@@ -26,3 +26,27 @@ spec:
   #ingress:  < - WITHOUT INGRESS, DENY ALL
   #  - { }   < - WITHOUT INGRESS, DENY ALL
   #
+
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payroll-policy
+  namespace: default
+spec:
+  ingress:     # allow ingress trafik only from internal pod AND port 8080
+    - from:
+        - podSelector:
+            matchLabels:
+              name: internal
+      ports:
+        - port: 8080
+          protocol: TCP
+  podSelector:
+    matchLabels:
+      name: payroll  # apply Policy to  payroll pod
+  policyTypes:
+    - Ingress       #ingress type
+

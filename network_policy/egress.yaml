@@ -27,3 +27,4 @@ spec:
   #egress:  < - WITHOUT EGRESS, DENY ALL
   #  - { }  < - WITHOUT EGRESS, DENY ALL
   #
+

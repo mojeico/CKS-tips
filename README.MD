@@ -196,8 +196,6 @@ Check folder  - [network_policy](network_policy)
 
 
 # Node Metadata ( needs to block it)
-
-
 - get metadata about node - kubectl exec app -- curl -s http://controlplane:9999
 
 
@@ -242,8 +240,23 @@ Limit node access
 - useradd -d /opt/sam -s /bin/bash -G admin -u 2328 sam
 
 
+apt list --installed
+apt remove nginx -y
+apt install wget -y
+
+systemctl list-units --all
+netstat -natp  | grep 9090
+
+
+
 
 # Tracing syscalls
+
+
+
+pidof etcd
+
+strace -p pid_number 
 
 !!!!!! needs to read about syscall 
 
@@ -252,6 +265,9 @@ https://github.com/aquasecurity/tracee
 
 
 Seccomp in Kubernetes 
+
+
+
 
 
 # AppArmor 
@@ -273,28 +289,64 @@ and AppArmor in Kubernetes
 
 
 
+# ################
+# ################
+# ################
+# ################
+# --- MICROSERVICES AND OTHER ---
+# ################
+
+
+
+# securityContext 
+
+- check - [security_context](security_context)(security_)
+
+
+
+
+# Admission Controllers 
+
+Check each request to the API server before it’s persisted to etcd, and can 
+
+
+
+Example
+
+In kube-apiserver needs add:   --enable-admission-plugins=NamespaceLifecycle,LimitRanger,PodSecurity,...
+
+
+Enable:
+
+- kubectl run nginx --image nginx -n blue
+- Error from server (NotFound): namespaces "blue" not found
+- Because kubernetes have NamespaceExists admission controller enabled which rejects requests to namespaces that do not exist.
+- ADD - --enable-admission-plugins=NamespaceAutoProvision,..... to kube-apiserver
+- NamespaceAutoProvision admission controller - create namespace automatically 
+
+Disable: 
+
+
+- add --disable-admission-plugins=DefaultStorageClass  to kube-apiserver 
+
+
+
+Get all admission-plugins 
+
+ps -ef | grep kube-apiserver | grep admission-plugins
 
 
 
 
 
 
+Pod security admission  (PSA) -   These standards let you define how you want to restrict the behavior of pods in a clear, consistent fashion.
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+Pod security standards 
 
 
 
