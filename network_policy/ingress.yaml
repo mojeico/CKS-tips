@@ -44,9 +44,31 @@ spec:
       ports:
         - port: 8080
           protocol: TCP
+    #- .....
+    #- .....
+    #- .....
   podSelector:
     matchLabels:
       name: payroll  # apply Policy to  payroll pod
   policyTypes:
     - Ingress       #ingress type
 
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-specific-ingress
+  namespace: namespace-ui
+spec:
+  podSelector: {} # apply to all pod IN  (IMPORTANT) namespace-ui namespace
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:               # alloy ingress traffic only from  namespace-web  namespace
+        - namespaceSelector:
+            matchExpressions:
+              - key: namespace
+                operator: In
+                values:
+                  - namespace-web

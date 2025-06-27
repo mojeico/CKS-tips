@@ -28,3 +28,19 @@ spec:
   #  - { }  < - WITHOUT EGRESS, DENY ALL
   #
 
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-external-egress
+  namespace: namespace-worker
+spec:
+  podSelector: {}  # Selects all pods in namespace-worker
+  policyTypes:
+    - Egress
+  egress:
+    # Allow egress to all pods in all namespaces
+    - to:
+        - namespaceSelector: {}  # All namespaces
+          podSelector: {}        # All pods

@@ -375,6 +375,7 @@ TO create your own rule - you need to create AdmissionConfiguration
 
 
 # Open Policy Agent (OPA)
+
 - Gatekeeper 
 
 
@@ -403,6 +404,145 @@ admission webhook "validating-webhook.openpolicyagent.org" denied the request: i
 
 
 
+# Secrets 
+
+
+* Create secret - `kubectl create secret generic my-secret --from-literal=DB_PASSWORD=password`
+* Create secret - `kubectl create secret generic db-secret --from-literal=DB_Host=sql01 --from-literal=DB_User=root --from-literal=DB_Password=password123`
+* echo -n 'test1' | base64
+
+
+````yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    name: webapp-pod
+    namespace: default
+spec:
+  containers:
+  - image: kodekloud/simple-webapp-mysql
+    imagePullPolicy: Always
+    name: webapp
+    envFrom:
+    - secretRef:
+        name: db-secret`
+````
+
+
+
+# ResourceQuota
+
+
+- kubectl describe quota team-a-resource-quota -n team-a
+ 
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-a-resource-quota
+  namespace: team-a
+spec:
+  hard:
+    pods: "5"
+    requests.cpu: "0.5"
+    requests.memory: 500Mi
+    limits.cpu: "1"
+    limits.memory: 1Gi
+```
+
+
+# Taint and Toleration 
+
+- taint       
+  - add    - `kubectl taint nodes node01 team=team-a:NoSchedule`
+  - remove - `kubectl taint nodes node01 team=team-a:NoSchedule-`
+- toleration
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: team-a-pod
+  namespace: team-a
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+  tolerations:
+    - key: "team"
+      operator: "Equal"
+      value: "team-a"
+      effect: "NoSchedule"
+
+```
+
+
+
+
+
+# ################
+# ################
+# ################
+# ################
+# --- SUPPLY CHAIN SECURITY  ---
+# ################
+
+
+# SBOM  
+это структурированный список всех компонентов, библиотек, зависимостей и модулей,
+которые используются в программном обеспечении. 
+Проще говоря, это как «список ингредиентов» для программы.
+
+
+
+Зачем нужен SBOM
+Безопасность
+— Позволяет быстро находить уязвимые компоненты при выходе новых CVE (например, уязвимость в log4j).
+— Упрощает аудит безопасности и лицензий.
+Соответствие требованиям
+— Некоторые стандарты и законы (например, Executive Order 14028 в США) требуют от поставщиков наличие SBOM.
+Трассируемость
+— Упрощает понимание, какие версии библиотек используются и как они влияют на поведение приложения.
+
+
+
+
+
+syft — генератор SBOM
+
+- curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+- syft docker.io/kodekloud/webapp-color:latest -o spdx > /root/webapp-spdx.sbom
+- syft docker.io/kodekloud/webapp-color:latest -o cyclonedx-json > /root/webapp-sbom.json
+
+
+
+
+
+grype — сканер уязвимостей
+- curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+- grype sbom:/root/webapp-sbom.json -o json > /root/grype-report.json
+
+
+
+
+
+# KubeLinter 
+- статический анализ  yaml
+
+
+# Whitelisting allowed registries (our images )
+
+We can use 
+- Admission Controller
+- OPA (Open Policy Agent ) or Policy engine 
+- ImagePolicyWebhook
+
+
+
+# kubesec  
+
+- статический анализ  yaml 
 
 
 
@@ -410,22 +550,50 @@ admission webhook "validating-webhook.openpolicyagent.org" denied the request: i
 
 
 
+# ################
+# ################
+# ################
+# ################
+# --- MONITORING  LOGGING AND RUNTIME SECURITY ---
+# ################
+
+
+
+Falco  - 
+
+
+- чекает что происходит в кластере 
+
+
+🛡 Зачем нужен Falco
+
+Назначение	                                Примеры
+🐞 Обнаружение нарушений безопасности	Установка exec в контейнере, запуск bash
+📜 Аудит и соответствие требованиям	    Уведомления о доступе к чувствительным файлам
+🔥 Реагирование на инциденты	        Алерты в Prometheus, Slack, SIEM
+👀 Мониторинг runtime-поведений	        Нестандартные подключения, работа с сокетами
 
 
 
 
 
 
+# Audit log 
+
+Need to create audit policy 
 
 
-
-
-
-
-
-
-
-
+```yaml
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: Metadata
+  namespaces: ["prod"]
+  verbs: ["delete"]
+  resources:
+  - group: ""
+    resources: ["secrets"]
+```
 
 
 
