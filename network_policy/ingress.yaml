@@ -44,9 +44,9 @@ spec:
       ports:
         - port: 8080
           protocol: TCP
-    #- .....
-    #- .....
-    #- .....
+    #- from: bla bla bla
+    #- from: bla bla bla
+    #- from: bla bla bla
   podSelector:
     matchLabels:
       name: payroll  # apply Policy to  payroll pod
