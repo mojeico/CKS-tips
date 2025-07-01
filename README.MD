@@ -22,8 +22,19 @@
 
 
 - kube-bench - 
-  - download - https://github.com/aquasecurity/kube-bench
-  - run kube-bench - ./kube-bench --config-dir `pwd`/cfg --config `pwd`/cfg/config.yaml
+
+  
+- kube-bench run --targets=master | grep kube-controller -A 3 -  show "-A" + 3 lines 
+- kube-bench run --targets=master | grep "/var/lib/etcd" -B5
+
+- kube-bench run --targets master --check 1.2.15
+
+
+- ps -ef | grep kubelet
+
+
+
+
 
 
 
@@ -192,12 +203,13 @@ Check folder  - [network_policy](network_policy)
 
 
 
-
+- get labels - `k get pods --show-labels`
 
 
 # Node Metadata ( needs to block it)
 - get metadata about node - kubectl exec app -- curl -s http://controlplane:9999
 
+- need to create network policy to block trafik to node metadata 
 
 
 
@@ -253,10 +265,26 @@ netstat -natp  | grep 9090
 # Tracing syscalls
 
 
+find pods with name start with collector1 - `crictl pods --name collector1`
+
+show container with pod - `crictl ps --pod a61e29997e607`
+
+get all info abount container id - `crictl inspect CONTAINER_ID`
+
+get process -` ps aux | grep collector1-process`
+
+find Syscalls - `strace -p 14079`
+
 
 pidof etcd
 
 strace -p pid_number 
+
+
+
+strace kill -9 1234 - покажет что происходит когда - kill -9 1234
+
+
 
 !!!!!! needs to read about syscall 
 
@@ -277,8 +305,12 @@ Seccomp in Kubernetes
 and AppArmor in Kubernetes 
 
 
+- check status - apparmor_status  or aa-status
 
 
+We have profile 
+
+- apparmor_parser /root/profile  - add this profile
 
 
 
@@ -336,6 +368,15 @@ Get all admission-plugins
 ps -ef | grep kube-apiserver | grep admission-plugins
 
 
+
+
+
+
+also we can create our own policy and enable it 
+
+For example - imagepolicywebhook
+
+https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#imagepolicywebhook
 
 
 
@@ -412,6 +453,22 @@ admission webhook "validating-webhook.openpolicyagent.org" denied the request: i
 * echo -n 'test1' | base64
 
 
+
+ETCD in Kubernetes stores data under `/registry/{type}/{namespace}/{name}`. 
+
+read secrets fromk etcd -` ETCDCTL_API=3 etcdctl \
+--cert /etc/kubernetes/pki/apiserver-etcd-client.crt \
+--key /etc/kubernetes/pki/apiserver-etcd-client.key \
+--cacert /etc/kubernetes/pki/etcd/ca.crt get /registry/secrets/team-green/database-access`
+
+
+- Decode secrets  -` echo Y29uZmlkZW50aWFs | base64 -d`
+
+
+- if you don't have access to secret - `k -n restricted exec pod1-fd5d64b9c-pcx6q -- cat /etc/secret-volume/password `
+
+
+
 ````yaml
 apiVersion: v1
 kind: Pod
@@ -428,6 +485,24 @@ spec:
     - secretRef:
         name: db-secret`
 ````
+
+
+# Encrypt  secrets  in etcd 
+
+- https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/ 
+
+
+
+
+
+
+# Container Runtime Sandbox 
+
+Use gVisor and RuntimeClass with gVisor 
+
+
+
+
 
 
 
@@ -481,6 +556,7 @@ spec:
 
 
 
+
 # ################
 # ################
 # ################
@@ -497,6 +573,7 @@ spec:
 
 
 Зачем нужен SBOM
+
 Безопасность
 — Позволяет быстро находить уязвимые компоненты при выходе новых CVE (например, уязвимость в log4j).
 — Упрощает аудит безопасности и лицензий.
@@ -508,14 +585,30 @@ spec:
 
 
 
+bom generate --image registry.k8s.io/kube-apiserver:v1.31.0 --format json --output /opt/course/18/sbom1.json
+
+
+
+
+trivy image --format cyclonedx --output /opt/course/18/sbom2.json registry.k8s.io/kube-controller-manager:v1.31.0
+
+trivy sbom /opt/course/18/sbom_check.json
+
+
+
+
+
+trivy image nginx:1.16.1-alpine 
+
+
+
+
 
 syft — генератор SBOM
 
 - curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
 - syft docker.io/kodekloud/webapp-color:latest -o spdx > /root/webapp-spdx.sbom
 - syft docker.io/kodekloud/webapp-color:latest -o cyclonedx-json > /root/webapp-sbom.json
-
-
 
 
 
@@ -531,6 +624,20 @@ grype — сканер уязвимостей
 - статический анализ  yaml
 
 
+
+
+# kubesec
+
+- статический анализ  yaml
+run as 
+- binary 
+- docker contaider 
+- kubelet plugin 
+- Admission controller (kubesec-webhook)
+
+
+
+
 # Whitelisting allowed registries (our images )
 
 We can use 
@@ -538,11 +645,6 @@ We can use
 - OPA (Open Policy Agent ) or Policy engine 
 - ImagePolicyWebhook
 
-
-
-# kubesec  
-
-- статический анализ  yaml 
 
 
 
@@ -560,6 +662,13 @@ We can use
 
 
 Falco  - 
+
+
+- falco -U | grep httpd - show log and show container_id 
+- falco --list | grep container - show all available fields like -  %evt.time,%container.id,%container.name,%user.name
+- crictl pods -id container_id - show pod id 
+- crictl pods -id cab6dafd045d5 - give you service name 
+
 
 
 - чекает что происходит в кластере 
@@ -582,6 +691,14 @@ Falco  -
 
 Need to create audit policy 
 
+Args in kube-apiserver.yaml
+
+  - --audit-policy-file=/etc/kubernetes/audit/policy.yaml
+  - --audit-log-path=/etc/kubernetes/audit/logs/audit.log
+  - --audit-log-maxsize=5
+  - --audit-log-maxbackup=1
+
+
 
 ```yaml
 apiVersion: audit.k8s.io/v1
@@ -596,6 +713,66 @@ rules:
 ```
 
 
+```yaml
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+
+# log Secret resources audits, level Metadata
+- level: Metadata
+  resources:
+  - group: ""
+    resources: ["secrets"]
+
+# log node related audits, level RequestResponse
+- level: RequestResponse
+  userGroups: ["system:nodes"]
+
+# for everything else don't log anything
+- level: None
+```
 
 
 
+...
+volumes:
+- name: audit
+  hostPath:
+  path: /etc/kubernetes/audit-policy.yaml
+  type: File
+
+- name: audit-log
+  hostPath:
+  path: /var/log/kubernetes/audit/
+  type: DirectoryOrCreate
+-
+
+
+
+
+then mount the volumes:
+...
+volumeMounts:
+- mountPath: /etc/kubernetes/audit-policy.yaml
+  name: audit
+  readOnly: true
+- mountPath: /var/log/kubernetes/audit/
+  name: audit-log
+  readOnly: false
+  and finally configure the hostPath:
+
+
+
+
+
+
+# Make it impossible to podman exec , docker exec or kubectl exec into the container using bash
+
+
+```dockerfile
+FROM ubuntu:20.04
+RUN apt-get update && apt-get -y install curl
+ENV URL https://google.com/this-will-fail?secret-token=
+RUN rm /usr/bin/bash  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+CMD ["sh", "-c", "curl --head $URL$TOKEN"]
+```
