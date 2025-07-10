@@ -245,6 +245,82 @@ Check folder  - [network_policy](network_policy)
 
 
 
+Need to create audit policy
+
+Args in kube-apiserver.yaml
+
+- --audit-policy-file=/etc/kubernetes/audit/policy.yaml
+- --audit-log-path=/etc/kubernetes/audit/logs/audit.log
+- --audit-log-maxsize=5  ---- maximum size in megabytes
+- --audit-log-maxbackup=1   
+- --audit-log-maxage=20   ----- maximum age of the log entries should not exceed 30 days.
+
+
+
+```yaml
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: Metadata
+  namespaces: ["prod"]
+  verbs: ["delete"]
+  resources:
+  - group: ""
+    resources: ["secrets"]
+```
+
+
+```yaml
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+
+# log Secret resources audits, level Metadata
+- level: Metadata
+  resources:
+  - group: ""
+    resources: ["secrets"]
+
+# log node related audits, level RequestResponse
+- level: RequestResponse
+  userGroups: ["system:nodes"]
+
+# for everything else don't log anything
+- level: None
+```
+
+
+
+...
+volumes:
+- name: audit
+  hostPath:
+  path: /etc/kubernetes/audit-policy.yaml
+  type: File
+
+- name: audit-log
+  hostPath:
+  path: /var/log/kubernetes/audit/
+  type: DirectoryOrCreate
+-
+
+
+
+
+then mount the volumes:
+...
+volumeMounts:
+- mountPath: /etc/kubernetes/audit-policy.yaml
+  name: audit
+  readOnly: true
+- mountPath: /var/log/kubernetes/audit/
+  name: audit-log
+  readOnly: false
+  and finally configure the hostPath:
+
+
+
+
 
 # ################
 # ################
@@ -326,21 +402,47 @@ Seccomp in Kubernetes
 
 # AppArmor 
 
-!!!! needs to read about AppArmor
-
-and AppArmor in Kubernetes 
-
-
-- check status - apparmor_status  or aa-status
-
-
-We have profile 
-
-- apparmor_parser /root/profile  - add this profile
 
 
 
+- create rule - rule.yaml 
 
+```yaml
+#include <tunables/global>
+
+profile k8s-apparmor-example-deny-write flags=(attach_disconnected) {
+  #include <abstractions/base>
+
+  file,
+
+  # Deny all file writes.
+  deny /** w,
+}
+```
+
+
+- add this profile            - `apparmor_parser rule.yaml`   
+- check if it was created     - `apparmor_status | grep "k8s-apparmor-example-deny-write"` 
+
+- copy file to all node - `scp app_rule.yaml node01:/root`
+
+- create pod 
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-apparmor
+spec:
+  securityContext:
+    appArmorProfile: # this 
+      type: Localhost
+      localhostProfile: k8s-apparmor-example-deny-write
+  containers:
+  - name: hello
+    image: busybox:1.28
+    command: [ "sh", "-c", "echo 'Hello AppArmor!' && sleep 1h" ]
+```
 
 
 
@@ -400,10 +502,15 @@ ps -ef | grep kube-apiserver | grep admission-plugins
 
 also we can create our own policy and enable it 
 
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 For example - imagepolicywebhook
 
 https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#imagepolicywebhook
 
+https://github.com/moabukar/CKS-Exercises-Certified-Kubernetes-Security-Specialist/blob/main/7-mock-exam-questions/Q10-ImagePolicyWebhook.md
 
 
 
@@ -442,31 +549,22 @@ To enable Pod Security:
 
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
-  name: secure-deployment
-  namespace: test
+  name: non-root-user-container
+  namespace: k29
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: secure-app
-  template:
-    metadata:
-      labels:
-        app: secure-app
-    spec:
-      containers:
-        - name: app 
-          image: nginx:1.25
-          securityContext:
-            allowPrivilegeEscalation: false # add this 
-            runAsNonRoot: true # add this 
-            capabilities: # add this 
-              drop: ["ALL"] # add this 
-            seccompProfile: # add this 
-              type: RuntimeDefault # add this 
+  containers:
+    - image: bitnami/nginx:1.21.6
+      name: secured-container
+      securityContext:                  # add this 
+        runAsNonRoot: true              # add this 
+        allowPrivilegeEscalation: false # add this 
+        capabilities:                   # add this 
+          drop: ["ALL"]                 # add this 
+        seccompProfile:                 # add this 
+          type: RuntimeDefault          # add this 
 ```
 
 
@@ -785,19 +883,24 @@ Falco  -
 
 - falco -U | grep httpd - show log and show container_id 
 - falco --list | grep container - show all available fields like -  %evt.time,%container.id,%container.name,%user.name
-- crictl pods -id container_id - show pod id 
+
+
+- crictl ps -id container_id
+
+- crictl pods -id pod_id - show pod by id 
 - crictl pods -id cab6dafd045d5 - give you service name 
 
 
 
-- create rule rule.yaml
+- create rule in /etc/falco/falco_rules.local.yaml
 
 ```yaml
-- rule: The program "curl" is run in a container
-  desc: An event will trigger every time you run cat in a container
-  condition: evt.type = execve and container.id != host and proc.name = cat
-  output: "curl was run inside a container"
-  priority: INFO
+- rule: Read Sensitive File
+  desc: Alert when someone tries to read a sensitive file like /etc/shadow
+  condition: open_read and fd.name=/etc/shadow
+  output: "Sensitive file read (user=%user.name command=%proc.cmdline)"
+  priority: ERROR
+  tags: [filesystem, sensitive]
 ```
 
 
@@ -818,81 +921,6 @@ Falco  -
 
 !!!!!!!!!!!!!!!!!!!
 
-
-# Audit log 
-
-Need to create audit policy 
-
-Args in kube-apiserver.yaml
-
-  - --audit-policy-file=/etc/kubernetes/audit/policy.yaml
-  - --audit-log-path=/etc/kubernetes/audit/logs/audit.log
-  - --audit-log-maxsize=5  ---- maximum size in megabytes
-  - --audit-log-maxbackup=1
-  - --audit-log-maxage=20
-
-
-
-```yaml
-apiVersion: audit.k8s.io/v1
-kind: Policy
-rules:
-- level: Metadata
-  namespaces: ["prod"]
-  verbs: ["delete"]
-  resources:
-  - group: ""
-    resources: ["secrets"]
-```
-
-
-```yaml
-apiVersion: audit.k8s.io/v1
-kind: Policy
-rules:
-
-# log Secret resources audits, level Metadata
-- level: Metadata
-  resources:
-  - group: ""
-    resources: ["secrets"]
-
-# log node related audits, level RequestResponse
-- level: RequestResponse
-  userGroups: ["system:nodes"]
-
-# for everything else don't log anything
-- level: None
-```
-
-
-
-...
-volumes:
-- name: audit
-  hostPath:
-  path: /etc/kubernetes/audit-policy.yaml
-  type: File
-
-- name: audit-log
-  hostPath:
-  path: /var/log/kubernetes/audit/
-  type: DirectoryOrCreate
--
-
-
-
-
-then mount the volumes:
-...
-volumeMounts:
-- mountPath: /etc/kubernetes/audit-policy.yaml
-  name: audit
-  readOnly: true
-- mountPath: /var/log/kubernetes/audit/
-  name: audit-log
-  readOnly: false
-  and finally configure the hostPath:
 
 
 
