@@ -1,7 +1,25 @@
 
+---
+#old version
+---
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# new version
+
+
 #1 - create SA - my-super-sa
 #2 - add role and bla bla bla
 #3 - add serviceAccountName to pod and
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: example-sa
+automountServiceAccountToken: false # you can add it to pod spec.automountServiceAccountToken:false
+
+---
+# kubectl create sa  my-super-sa
 
 apiVersion: v1
 kind: Pod
@@ -25,22 +43,4 @@ spec:
               path: token
               expirationSeconds: 3600
 
-
-
-
-
----
-#old version
-
-kubectl create sa <serviceaccount-name>
-  
-  kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Secret
-metadata:
-  name: blabla-secret
-  annotations:
-    kubernetes.io/service-account.name: blabla
-type: kubernetes.io/service-account-token
-  EOF
 

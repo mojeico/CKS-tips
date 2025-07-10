@@ -15,6 +15,7 @@
 # --- CLUSTER SETUP AND HARDENING ---
 # ###########################
 
+
 - CIS benchmark (k8s pdf document)  - https://www.cisecurity.org/benchmark/kubernetes
 - CIS-CAT - tool to check your system (Kubernetes only in PRO version ) 
   - RUN - sh ./Assessor-CLI.sh -i -rd /var/www/html/ -nts -rp index
@@ -27,7 +28,16 @@
 - kube-bench run --targets=master | grep kube-controller -A 3 -  show "-A" + 3 lines 
 - kube-bench run --targets=master | grep "/var/lib/etcd" -B5
 
-- kube-bench run --targets master --check 1.2.15
+- kube-bench run --targets=master --check 1.2.15 
+
+- also targets can be [master node controlplane etcd policies ] ->  --targets=node,etcd
+
+
+- kube-bench run --benchmark cis-1.6 
+
+
+
+- ./kube-bench --config-dir ./cfg --config ./cfg/config.yaml
 
 
 - ps -ef | grep kubelet
@@ -165,6 +175,18 @@ RoleBinding	           A  Role	          A specific  namespace
 ClusterRoleBinding	   A ClusterRole	  The entire cluster
 
 
+
+
+# Удалить пользователи test из группы dev с помощью kubectl
+
+kubectl get rolebinding -A | grep dev
+kubectl edit rolebinding dev-access -n default
+
+
+
+
+
+
 # Kubelet Security 
 
 - test kubelet - curl -sk https://localhost:10250/pods
@@ -197,6 +219,7 @@ ClusterRoleBinding	   A ClusterRole	  The entire cluster
 
 
 
+
 # Network policy 
 
 Check folder  - [network_policy](network_policy)
@@ -212,6 +235,9 @@ Check folder  - [network_policy](network_policy)
 - need to create network policy to block trafik to node metadata 
 
 
+
+
+!!!!!!!!!!!!!!!!!!!
 
 # Audit policy 
 
@@ -383,15 +409,19 @@ https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#i
 
 
 
+
+!!!!!!!!!!!!!!!!!!!
+
 # Pod security admission  (PSA) -  check pod security before creating  (MODE)
 
-#  Pod security standards  - base policy for pod  (LEVEL)
+
 
 MODE:
 - Warn    -   just warn log 
 - Audit   -   Write audit log
 - Enforce -  	Policy violations will cause the pod to be rejected.
 
+#  Pod security standards  - base policy for pod  (LEVEL)
 
 LEVEL:
 - Privileged - Full access / Unrestricted policy, providing the widest possible level of permissions.
@@ -409,7 +439,40 @@ To enable Pod Security:
 - kubectl label ns beta pod-security.kubernetes.io/enforce=baseline pod-security.kubernetes.io/warn=restricted
 
 
-TO create your own rule - you need to create AdmissionConfiguration 
+
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-deployment
+  namespace: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secure-app
+  template:
+    metadata:
+      labels:
+        app: secure-app
+    spec:
+      containers:
+        - name: app 
+          image: nginx:1.25
+          securityContext:
+            allowPrivilegeEscalation: false # add this 
+            runAsNonRoot: true # add this 
+            capabilities: # add this 
+              drop: ["ALL"] # add this 
+            seccompProfile: # add this 
+              type: RuntimeDefault # add this 
+```
+
+
+
+
+
 
 
 
@@ -443,6 +506,20 @@ admission webhook "validating-webhook.openpolicyagent.org" denied the request: i
 - Kyverno
 
 
+
+
+
+# Apiserver Security 
+
+-  Accessible through a NodePort Service - `--kubernetes-service-node-port=31000`
+
+
+
+
+
+- Only accessible through a ClusterIP Service - `delete kubernetes-service-node-port or set --kubernetes-service-node-port=0`
+- check kubernetes service port type - `k get svc`
+- delete kubernetes service (it will be recreated) - `k delete svc kubernetes`
 
 
 # Secrets 
@@ -505,6 +582,46 @@ Use gVisor and RuntimeClass with gVisor
 
 
 
+# kubernetes ingress redirect http to https
+
+
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: world
+  namespace: world
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"  # add this !!!!
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  tls:                            # add
+  - hosts:                        # add
+    - world.universe.mine         # add
+    secretName: ingress-tls       # add
+  rules:
+  - host: "world.universe.mine"
+    http:
+      paths:
+      - path: /europe
+        pathType: Prefix
+        backend:
+          service:
+            name: europe
+            port:
+              number: 80
+      - path: /asia
+        pathType: Prefix
+        backend:
+          service:
+            name: asia
+            port:
+              number: 80
+```
+
 
 # ResourceQuota
 
@@ -565,6 +682,9 @@ spec:
 # ################
 
 
+
+!!!!!!!!!!!!!!!!!!!
+
 # SBOM  
 это структурированный список всех компонентов, библиотек, зависимостей и модулей,
 которые используются в программном обеспечении. 
@@ -590,15 +710,12 @@ bom generate --image registry.k8s.io/kube-apiserver:v1.31.0 --format json --outp
 
 
 
-trivy image --format cyclonedx --output /opt/course/18/sbom2.json registry.k8s.io/kube-controller-manager:v1.31.0
-
-trivy sbom /opt/course/18/sbom_check.json
-
+Scan image  - `trivy image --format cyclonedx --output /opt/course/18/sbom2.json registry.k8s.io/kube-controller-manager:v1.31.0`
+Show vulnerabilities with critical - `trivy sbom /opt/course/18/sbom_check.json --severity CRITICAL`
 
 
 
-
-trivy image nginx:1.16.1-alpine 
+Scan image - `trivy image nginx:1.16.1-alpine `
 
 
 
@@ -661,6 +778,8 @@ We can use
 
 
 
+!!!!!!!!!!!!!!!!!!!
+
 Falco  - 
 
 
@@ -668,6 +787,18 @@ Falco  -
 - falco --list | grep container - show all available fields like -  %evt.time,%container.id,%container.name,%user.name
 - crictl pods -id container_id - show pod id 
 - crictl pods -id cab6dafd045d5 - give you service name 
+
+
+
+- create rule rule.yaml
+
+```yaml
+- rule: The program "curl" is run in a container
+  desc: An event will trigger every time you run cat in a container
+  condition: evt.type = execve and container.id != host and proc.name = cat
+  output: "curl was run inside a container"
+  priority: INFO
+```
 
 
 
@@ -685,6 +816,7 @@ Falco  -
 
 
 
+!!!!!!!!!!!!!!!!!!!
 
 
 # Audit log 
@@ -695,8 +827,9 @@ Args in kube-apiserver.yaml
 
   - --audit-policy-file=/etc/kubernetes/audit/policy.yaml
   - --audit-log-path=/etc/kubernetes/audit/logs/audit.log
-  - --audit-log-maxsize=5
+  - --audit-log-maxsize=5  ---- maximum size in megabytes
   - --audit-log-maxbackup=1
+  - --audit-log-maxage=20
 
 
 
@@ -762,6 +895,14 @@ volumeMounts:
   and finally configure the hostPath:
 
 
+
+# Immutable Root FileSystem
+
+
+```yaml
+        securityContext:                  # add
+          readOnlyRootFilesystem: true    # add
+```
 
 
 
