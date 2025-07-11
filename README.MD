@@ -684,6 +684,7 @@ Use gVisor and RuntimeClass with gVisor
 # kubernetes ingress redirect http to https
 
 
+https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -804,12 +805,12 @@ spec:
 
 
 
-bom generate --image registry.k8s.io/kube-apiserver:v1.31.0 --format json --output /opt/course/18/sbom1.json
+
+Scan image and generate SBOM document (SPDX)       - `bom generate --image registry.k8s.io/kube-apiserver:v1.31.0 --format json --output sbom1.json`
+
+Scan image  and generate SBOM document (CycloneDX) - `trivy image registry.k8s.io/kube-controller-manager:v1.31.0 --format cyclonedx --output sbom2.json `
 
 
-
-
-Scan image  - `trivy image --format cyclonedx --output /opt/course/18/sbom2.json registry.k8s.io/kube-controller-manager:v1.31.0`
 Show vulnerabilities with critical - `trivy sbom /opt/course/18/sbom_check.json --severity CRITICAL`
 
 
@@ -856,9 +857,10 @@ run as
 # Verify platform binaries
 
 
-- wget https://dl.k8s.io/vX.Y.Z/kubernetes-server-linux-amd64.tar.gz
+- curl https://dl.k8s.io/v1.22.0/kubernetes.tar.gz -L -o kubernetes.tar.gz
 
 - sha512um 
+- shasum -a 512 kubernetes.tar.gz OR sha512sum kubernetes.tar.gz
 
 
 
