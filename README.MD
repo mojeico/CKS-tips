@@ -379,9 +379,9 @@ get process -` ps aux | grep collector1-process`
 find Syscalls - `strace -p 14079`
 
 
-pidof etcd
+`pidof etcd`
 
-strace -p pid_number 
+`strace -p pid_number `
 
 
 
