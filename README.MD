@@ -125,9 +125,10 @@ source ~/.bashrc
 
 # 
 - kubectl auth can-i delete node 
-- kubectl auth can-i create deployments 
+- kubectl auth can-i create deployments
+- kubectl auth can-i --list --as=system:anonymous -n default
 
-kubectl get pods --as dev-user
+- kubectl get pods --as dev-user
 
 
 # Authorization type  - kube-apiserver  --authorization-mode=......
@@ -850,6 +851,14 @@ run as
 - kubelet plugin 
 - Admission controller (kubesec-webhook)
 
+
+
+# Verify platform binaries
+
+
+- wget https://dl.k8s.io/vX.Y.Z/kubernetes-server-linux-amd64.tar.gz
+
+- sha512um 
 
 
 
